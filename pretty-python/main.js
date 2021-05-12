@@ -2,7 +2,7 @@ define([
     'base/js/namespace',
     'jquery',
     'base/js/events',
-], function(Jupyter, $, events) {
+], function (Jupyter, $, events) {
 
     /*
         Change raw python code on pretty math pseudo-code
@@ -11,22 +11,24 @@ define([
     function make_python_pretty(cell) {
         const html = get_pretty_html_from_code(cell.get_text());
         const code_wrapper = cell.code_mirror.display.lineDiv;
-        $(code_wrapper).html(html.join(' '));
+        $(code_wrapper).html(
+            '<pre class=" CodeMirror-line " role="presentation">' +
+                html.join(' ') +
+            '</pre>'
+        );
     }
 
-     /*
-        Returns wrapped html pretty math code from raw python code
-        @param code - python source code
-     */
+    /*
+       Returns wrapped html pretty math code from raw python code
+       @param code - python source code
+    */
     function get_pretty_html_from_code(code) {
         return [
-            '<pre class=" CodeMirror-line " role="presentation">',
-                '<span class="cm-variable">c</span>',
-                '<span class="cm-operator">=</span>',
-                '<span class="cm-variable">10</span>',
-                '<span class="cm-operator">⋅</span>',
-                '<span class="cm-variable">12</span>',
-            '</pre>'
+            '<span class="cm-variable">c</span>',
+            '<span class="cm-operator">=</span>',
+            '<span class="cm-variable">10</span>',
+            '<span class="cm-operator">⋅</span>',
+            '<span class="cm-variable">12</span>',
         ];
     }
 
