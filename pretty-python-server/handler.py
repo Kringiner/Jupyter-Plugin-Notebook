@@ -1,9 +1,10 @@
-from jupyter_server.base.handlers import JupyterHandler
-from jupyter_server.extension.handler import ExtensionHandlerMixin
 import json
+from abc import ABC
+
+from notebook.base.handlers import IPythonHandler
 
 
-class DefaultHandler(ExtensionHandlerMixin, JupyterHandler):
+class PrettyPythonHandler(IPythonHandler, ABC):
     def get(self):
         obj = {'key': 'value'}
         self.set_header("Content-Type", "application/json")
