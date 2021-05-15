@@ -11,8 +11,8 @@ define([
         @returns string
      */
     function extract_html(latex) {
-        //ToDo
-        throw new Error("Not implemented exception!");
+        console.log(latex)
+        return latex;
     }
 
     /*
