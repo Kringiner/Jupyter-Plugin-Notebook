@@ -1,44 +1,115 @@
 import ast
 import json
+import sys
 from abc import ABC
 
 import astunparse
-import pytexit
-import latex2mathml.converter as math_ml_converter
 from notebook.base.handlers import IPythonHandler
+
+mathml = '<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">'
+equal_sign = '&#x0003D;'
+pow_sign = '&#x22C5;'
+plus_sign = '&#x0002B;'
+minus_sign = '&#x02212;'
+left_bracket = '<mo stretchy="true" fence="true" form="prefix">&#x00028;</mo>'
+right_bracket = '<mo stretchy="true" fence="true" form="postfix">&#x00029;</mo>'
+
+priorities = {ast.Div: 2, ast.Mult: 2, ast.Sub: 1, ast.Add: 1, ast.BinOp: sys.maxsize}
+math_names = {'alpha': '&#x03B1;', 'beta': '&#x03B2;'}
 
 
 class PrettyPythonHandler(IPythonHandler, ABC):
     def post(self):
         python_code = self.get_json_body()['code']
-        latex_code = main_parse(ast.parse(python_code))
+        latex_code = module_parser(ast.parse(python_code))
         self.set_header("Content-Type", "application/json")
         self.set_status(200)
         latex_res = {'latex_code': latex_code}
         self.write(json.dumps(latex_res))
 
 
-def parse_expr(node):
-    if type(node) == ast.Assign and type(node.value) == ast.BinOp:
-        latex_str = pytexit.py2tex(astunparse.unparse(node), print_formula=False, print_latex=False)[2:-2]
-        return math_ml_converter.convert(latex_str)
+def parse_expr(node) -> str:
+    if type(node) == ast.Assign:
+        targets = parse_targets(node.targets)
+        expression = parse_expr(node.value)
+        return f'{mathml}<mrow>{targets}<mo>{equal_sign}</mo>{expression}</mrow></math>'
+    elif type(node) == ast.BinOp:
+        return parse_bin_op(node)
+    elif type(node) == ast.Name:
+        name = astunparse.unparse(node)[:-1]
+        name = math_names[name] if name in math_names else name
+        return f'<mi>{name}</mi>'
+    elif type(node) == ast.Constant:
+        return f'<mn>{astunparse.unparse(node)[:-1]}</mn>'
+    elif type(node) == ast.Call:
+        return parse_call(node)
     elif type(node) == ast.For:
-        for_main_str = f'<pre>\tfor {astunparse.unparse(node.target)[:-1]} in {astunparse.unparse(node.iter)[:-1]}:</pre>'
-        for_body = f'<div>{loops_body_parser(node.body)}</div>'
-        return for_main_str + for_body
+        return parse_for_loop(node)
+    elif type(node) == ast.If:
+        return parse_conditions(node)
     else:
-        return f'<pre>{astunparse.unparse(node)[1:-1]}</pre>'
+        name_str = astunparse.unparse(node)[1:-1]
+        return f'<mtext>{name_str}</mext>'
 
 
-def main_parse(module):
+def parse_bin_op(node: ast.BinOp) -> str:
+    right = parse_expr(node.right)
+    left = parse_expr(node.left)
+    if type(node.right) == ast.BinOp and priorities[type(node.op)] > priorities[type(node.right.op)]:
+        right = f'{left_bracket}{right}{right_bracket}'
+    if type(node.left) == ast.BinOp and priorities[type(node.op)] > priorities[type(node.left.op)]:
+        left = f'{left_bracket}{left}{right_bracket}'
+    if type(node.op) == ast.Mult:
+        return f'{left}<mo>{pow_sign}</mo>{right}'
+    elif type(node.op) == ast.Div:
+        return f'<mfrac><mrow>{left}</mrow><mrow>{right}</mrow></mfrac>'
+    elif type(node.op) == ast.Add:
+        return f'{left}<mo>{plus_sign}</mo>{right}'
+    elif type(node.op) == ast.Sub:
+        return f'{left}<mo>{minus_sign}</mo>{right}'
+
+
+def parse_call(node: ast.Call) -> str:
+    if node.func.id == 'sqrt':
+        return f'<msqrt><mrow>{parse_expr(node.args[0])}</mrow></msqrt>'
+    else:
+        return f'<mrow><mi>{node.func.id}</mi><mfenced>{parse_targets(node.args)}</mfenced></mrow>'
+
+
+def parse_targets(targets_list: list) -> str:
+    targets_str = []
+    for target in targets_list:
+        targets_str.append(' ' * target.col_offset + parse_expr(target))
+    return '\n'.join(targets_str)
+
+
+def parse_for_loop(node: ast.For) -> str:
+    for_loop = f'{mathml}<mrow><mtext>for {astunparse.unparse(node.target)[:-1]} in {astunparse.unparse(node.iter)[:-1]}:</mtext><mrow></math>\n'
+    for_loop += parse_targets(node.body)
+    return for_loop
+
+
+def parse_conditions(if_node: ast.If, nested=False) -> str:
+    if_str = 'elif' if nested else 'if'
+    if_condition = ' ' * if_node.col_offset + f'{mathml}<mrow><mtext>{if_str} {astunparse.unparse(if_node.test)[1:-2]}:</mext><mrow></math>\n'
+    if_condition += parse_targets(if_node.body)
+    for node in if_node.orelse:
+        if type(node) == ast.If:
+            if_condition += '\n' + parse_conditions(node, True)
+        else:
+            if_condition += '\n' + parse_else(if_node.orelse)
+            break
+    return if_condition
+
+
+def parse_else(else_body: list) -> str:
+    else_str = f'{mathml}<mrow><mtext>else:</mtext></mrow></math>\n'
+    else_str += parse_targets(else_body)
+    return else_str
+
+
+def module_parser(module):
     res = []
     for node in ast.iter_child_nodes(module):
-        res.append(parse_expr(node))
-    return '\n'.join(res)
-
-
-def loops_body_parser(loop_body):
-    res = []
-    for node in loop_body:
         res.append(parse_expr(node))
     return '\n'.join(res)
