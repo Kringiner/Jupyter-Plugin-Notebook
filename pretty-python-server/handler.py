@@ -29,7 +29,31 @@ class PrettyPythonHandler(IPythonHandler, ABC):
 
 
 def parse_expr(node) -> str:
-    if type(node) == ast.Assign:
+    if type(node) == ast.Import:
+        import_expr = ast.unparse(node).split()
+        import_keyword = import_expr[0]
+        module_name = import_expr[1]
+        return f'{mathml}<mrow><mtext><mo class="keyword">{import_keyword}</mo> {module_name}</mtext></mrow></math>'
+    elif type(node) == ast.ImportFrom:
+        import_expr = ast.unparse(node).split()
+        from_keyword = import_expr[0]
+        module_name = import_expr[1]
+        import_keyword = import_expr[2]
+        imported = import_expr[3]
+        return f'{mathml}<mtext>' \
+               f'<mo class="keyword">{from_keyword} </mo>{module_name}' \
+               f'<mo class="keyword"> {import_keyword} </mo>{imported}' \
+               f'</mtext></mrow></math>'
+    elif type(node) == ast.FunctionDef:
+        function_definition = ast.unparse(node).split()[:2]
+        def_keyword = f'<mo class="keyword">{function_definition[0]} </mo>'
+        function_name = f'<mi class="def-function">{node.name}</mi>{function_definition[1].split(node.name)[-1]}'
+        function_body = module_parser(ast.parse(ast.unparse(node.body)))
+        return f'\n{mathml}<mrow><mtext>{def_keyword}{function_name}\n    {function_body}</mtext></mrow></math>\n'
+    elif type(node) == ast.Return:
+        return_expr = ast.unparse(node).split()
+        return f'<mtext><mo class="keyword">{return_expr[0]} </mo>{return_expr[1]}</mtext>'
+    elif type(node) == ast.Assign:
         targets = parse_targets(node.targets)
         expression = parse_expr(node.value)
         return f'{mathml}<mrow>{targets}<mo>{equal_sign}</mo>{expression}</mrow></math>'
@@ -84,14 +108,17 @@ def parse_targets(targets_list: list) -> str:
 
 
 def parse_for_loop(node: ast.For) -> str:
-    for_loop = f'{mathml}<mrow><mtext>for {astunparse.unparse(node.target)[:-1]} in {astunparse.unparse(node.iter)[:-1]}:</mtext><mrow></math>\n'
+    for_loop = f'{mathml}<mrow><mtext><mo style="color: #008000;">for </mo>' \
+               f'<mi>{astunparse.unparse(node.target)[:-1]}</mi>' \
+               f'<mo style="color: #008000;"> in </mo>{astunparse.unparse(node.iter)[:-1]}:' \
+               f'</mtext><mrow></math>\n'
     for_loop += parse_targets(node.body)
     return for_loop
 
 
 def parse_conditions(if_node: ast.If, nested=False) -> str:
     if_str = 'elif' if nested else 'if'
-    if_condition = ' ' * if_node.col_offset + f'{mathml}<mrow><mtext>{if_str} {astunparse.unparse(if_node.test)[1:-2]}:</mext><mrow></math>\n'
+    if_condition = ' ' * if_node.col_offset + f'{mathml}<mrow><mtext><mo class="keyword">{if_str} </mo> {astunparse.unparse(if_node.test)[1:-2]}:</mext><mrow></math>\n'
     if_condition += parse_targets(if_node.body)
     for node in if_node.orelse:
         if type(node) == ast.If:
@@ -103,7 +130,7 @@ def parse_conditions(if_node: ast.If, nested=False) -> str:
 
 
 def parse_else(else_body: list) -> str:
-    else_str = f'{mathml}<mrow><mtext>else:</mtext></mrow></math>\n'
+    else_str = f'{mathml}<mrow><mtext><mo class="keyword">else:</mo></mtext></mrow></math>\n'
     else_str += parse_targets(else_body)
     return else_str
 

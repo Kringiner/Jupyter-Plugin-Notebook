@@ -1,30 +1,21 @@
 define([
     'base/js/namespace',
+    'require',
     'jquery',
     'base/js/events',
-], function (Jupyter, $, events) {
+], function (Jupyter, requirejs, $, events) {
     const API_ROUTE = "/pretty-python-server/pretty-code";
 
-    /*
-        Returns html-markup from latex-markup using MathJax
-        @param latex - latex markup
-        @returns string
-     */
-    function extract_html(latex) {
-        console.log(latex)
-        return latex;
-    }
-
-    /*
+    /**
        Change raw python code on pretty math pseudo-code
-       @param cell - cell with python code
+       @param {CodeCell} cell - cell with python code
        @returns Promise<void>
     */
     async function make_python_pretty(cell) {
-        const latex_markup = await get_latex_markup_from_code(cell.get_text());
+        const mathml_markup = await get_latex_markup_from_code(cell.get_text());
         const code_wrapper = cell.code_mirror.display.lineDiv;
 
-        const html = extract_html(latex_markup);
+        const html = mathml_markup;
         $(code_wrapper).html(
             '<pre class=" CodeMirror-line " role="presentation">'
             + html +
@@ -33,9 +24,9 @@ define([
 
     }
 
-    /*
+    /**
        Returns latex markup from cell python code
-       @param code - python source code
+       @param {string} code - python source code
        @returns Promise<string>
     */
     async function get_latex_markup_from_code(code) {
@@ -59,11 +50,26 @@ define([
 
         return json['latex_code'];
     }
+    /**
+     * Add CSS file
+     *
+     * @param {string} filename filename
+     * @return void
+     */
+    function load_css(filename) {
+        const link = document.createElement("link");
+        link.type = "text/css";
+        link.rel = "stylesheet";
+        link.href = requirejs.toUrl(filename);
+        document.getElementsByTagName("head")[0].appendChild(link);
+    }
 
-    /*
+
+    /**
         Run on start
      */
     async function load_ipython_extension() {
+        load_css("./style.css");
         events.on("execute.CodeCell", async (event, data) => {
             await make_python_pretty(data.cell);
         });
