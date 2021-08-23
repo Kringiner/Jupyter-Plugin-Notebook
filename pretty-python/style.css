@@ -1,8 +1,5 @@
-mo.keyword {
-    color: #008000;
-    /*font-weight: bold;*/
-}
-
-mi.def-function {
-    color: #00f;
+.MJXp-display {
+    display: inline !important;
+    margin: 0 !important;
+    text-align: unset !important;
 }

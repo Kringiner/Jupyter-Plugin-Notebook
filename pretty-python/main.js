@@ -9,19 +9,19 @@ define([
     /**
        Change raw python code on pretty math pseudo-code
        @param {CodeCell} cell - cell with python code
-       @returns Promise<void>
+       @returns Promise
     */
     async function make_python_pretty(cell) {
-        const mathml_markup = await get_latex_markup_from_code(cell.get_text());
+        const latex = await get_latex_markup_from_code(cell.get_text());
         const code_wrapper = cell.code_mirror.display.lineDiv;
+        const latex_node = document.createElement("DIV");
+        latex_node.innerHTML = latex;
+        code_wrapper.innerHTML = "";
 
-        const html = mathml_markup;
-        $(code_wrapper).html(
-            '<pre class=" CodeMirror-line " role="presentation">'
-            + html +
-            '</pre>'
-        );
-
+        await MathJax.Hub.Queue(["Typeset", MathJax.Hub, latex_node]);
+        const newParent = document.createElement("PRE");
+        newParent.innerHTML = latex_node.innerHTML;
+        code_wrapper.appendChild(newParent);
     }
 
     /**
@@ -54,7 +54,7 @@ define([
      * Add CSS file
      *
      * @param {string} filename filename
-     * @return void
+     * @return void`
      */
     function load_css(filename) {
         const link = document.createElement("link");
@@ -70,6 +70,11 @@ define([
      */
     async function load_ipython_extension() {
         load_css("./style.css");
+        MathJax.Hub.Config({
+            "HTML-CSS": {
+              preferredFont: "STIX"
+            }
+        });
         events.on("execute.CodeCell", async (event, data) => {
             await make_python_pretty(data.cell);
         });
