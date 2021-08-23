@@ -2,8 +2,7 @@ import json
 from abc import ABC
 from ast import *
 from astor import *
-from pytexit import py2tex
-import astunparse
+import re
 from notebook.base.handlers import IPythonHandler
 
 greek = {
