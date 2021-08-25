@@ -84,7 +84,7 @@ class LatexVisitor(NodeVisitor):
             "Name": 1000,
             "Subscript": 1000,
             "Attribute": 1000,
-            "BinOp": 1000,
+            "BinOp": 300,
         }
 
     @staticmethod
