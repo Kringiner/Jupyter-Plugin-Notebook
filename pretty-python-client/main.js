@@ -4,7 +4,7 @@ define([
     'jquery',
     'base/js/events',
 ], function (Jupyter, requirejs, $, events) {
-    const API_ROUTE = "/pretty-python-server/pretty-code";
+    const API_ROUTE = "/pretty-python-client-server/pretty-code";
 
     /**
        Change raw python code on pretty math pseudo-code

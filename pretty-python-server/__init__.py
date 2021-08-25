@@ -1,7 +1,7 @@
 from .handler import PrettyPythonHandler
 from notebook.utils import url_path_join
 
-EXTENSION_API_ROUTE = '/pretty-python-server/pretty-code'
+EXTENSION_API_ROUTE = '/pretty-python-client-server/pretty-code'
 
 
 def load_jupyter_server_extension(nb_server_app):
